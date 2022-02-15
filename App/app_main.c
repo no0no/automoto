@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "stm32f4xx_hal.h"
+#include "stm32f4xx_hal_gpio.h"
 #include "main.h"
 
 void app_main(UART_HandleTypeDef huart2) {
@@ -20,16 +21,15 @@ void app_main(UART_HandleTypeDef huart2) {
 	while(1) {
 		uint32_t tickstart = 0;
 		GPIO_PinState first_press = HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin);
-		if (first_press) {
+		if (!first_press) {
 			tickstart = HAL_GetTick();
 			while(1) {
 				GPIO_PinState second_press = HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin);
-				if (second_press) {
+				if (!second_press) {
 					uint32_t elapsed = HAL_GetTick() - tickstart;
 					char buffer[32];
-					HAL_UART_Transmit(&huart2, (uint32_t*)buffer, sprintf(buffer, "%d\n\r", elapsed), 500);
+					HAL_UART_Transmit(&huart2, (uint32_t*)buffer, sprintf(buffer, "%d\n\r", elapsed), 1000);
 					HAL_Delay(1000);
-					break;
 				}
 			}
 		}
