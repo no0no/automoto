@@ -23,13 +23,16 @@ void app_main(UART_HandleTypeDef huart2) {
 		GPIO_PinState first_press = HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin);
 		if (!first_press) {
 			tickstart = HAL_GetTick();
+			// TODO: Interrupt instead of delay
+			HAL_Delay(1000);
 			while(1) {
 				GPIO_PinState second_press = HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin);
 				if (!second_press) {
 					uint32_t elapsed = HAL_GetTick() - tickstart;
-					char buffer[32];
-					HAL_UART_Transmit(&huart2, (uint32_t*)buffer, sprintf(buffer, "%d\n\r", elapsed), 1000);
+					char ebuffer[32];
+					HAL_UART_Transmit(&huart2, (uint32_t*)ebuffer, sprintf(ebuffer, "elapsed: %d\n\r", elapsed), 1000);
 					HAL_Delay(1000);
+					break;
 				}
 			}
 		}
