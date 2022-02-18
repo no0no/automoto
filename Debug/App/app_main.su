@@ -1,1 +1,6 @@
-app_main.c:8:6:app_main	48	static
+app_main.c:16:6:app_main	72	static
+app_main.c:25:6:init_temp_sensor	32	static
+app_main.c:44:6:init_button	32	static
+app_main.c:56:6:sample_sensors	72	static
+app_main.c:63:6:sample_button	56	static
+app_main.c:82:6:sample_temp_sensor	48	static
