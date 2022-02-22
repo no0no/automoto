@@ -9,17 +9,18 @@
 
 void init_button();
 void init_temp_sensor();
-void sample_sensors();
-void sample_button();
-void sample_temp_sensor();
-void delay_us(uint16_t us);
+void sample_sensors(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10);
+void sample_button(UART_HandleTypeDef huart2);
+uint8_t sample_temp_sensor(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10);
+uint8_t temp_check_response(TIM_HandleTypeDef htim10);
+void delay_us(uint16_t us, TIM_HandleTypeDef htim10);
 
-void app_main(UART_HandleTypeDef huart2) {
+void app_main(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10) {
 
 	init_button();
 	init_temp_sensor();
 
-	sample_sensors(huart2);
+	sample_sensors(huart2, htim10);
 
 }
 
@@ -54,10 +55,10 @@ void init_button() {
 	HAL_GPIO_Init(B1_GPIO_Port, &Init_Button);
 }
 
-void sample_sensors(UART_HandleTypeDef huart2) {
+void sample_sensors(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10) {
 	while (1) {
 		sample_button(huart2);
-		sample_temp_sensor(huart2);
+		uint8_t sample = sample_temp_sensor(huart2, htim10);
 	}
 }
 
@@ -89,11 +90,11 @@ void sample_temp_sensor(UART_HandleTypeDef huart2) {
 }
 */
 
-void sample_temp_sensor(UART_HandleTypeDef huart2) {
+uint8_t sample_temp_sensor(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10) {
 	uint8_t sample;
 	for (uint8_t i = 0; i < 8; i++) {
 		while (!(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1))) {
-			delay(40);
+			delay_us(40, htim10);
 			if (!(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1))) {
 				sample &= ~(1<<(7-i));
 			}
@@ -106,11 +107,11 @@ void sample_temp_sensor(UART_HandleTypeDef huart2) {
 	return sample;
 }
 
-uint8_t temp_check_response() {
+uint8_t temp_check_response(TIM_HandleTypeDef htim10) {
 	uint8_t response = 0;
-	delay_us(40);
+	delay_us(40, htim10);
 	if (!(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1))) {
-		delay(80);
+		delay_us(80, htim10);
 		if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1)) {
 			response = 1;
 		}
@@ -125,7 +126,7 @@ uint8_t temp_check_response() {
 
 
 
-void delay_us(uint16_t us) {
-	__HAL_TIM_SET_COUNTER(&htim1,0);  // set the counter value a 0
-	while (__HAL_TIM_GET_COUNTER(&htim1) < us);  // wait for the counter to reach the us input in the parameter
+void delay_us(uint16_t us, TIM_HandleTypeDef htim10) {
+	__HAL_TIM_SET_COUNTER(&htim10,0);  // set the counter value a 0
+	while (__HAL_TIM_GET_COUNTER(&htim10) < us);  // wait for the counter to reach the us input in the parameter
 }
