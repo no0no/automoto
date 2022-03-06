@@ -11,35 +11,27 @@ void init_button();
 void init_temp_sensor();
 void sample_sensors(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10);
 void sample_button(UART_HandleTypeDef huart2);
-uint8_t sample_temp_sensor(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10);
+uint8_t sample_temp_sensor(TIM_HandleTypeDef htim10);
 uint8_t temp_check_response(TIM_HandleTypeDef htim10);
 void delay_us(uint16_t us, TIM_HandleTypeDef htim10);
+void set_pin_input(GPIO_TypeDef *gpio, uint16_t gpio_pin);
+void set_pin_output(GPIO_TypeDef *gpio, uint16_t gpio_pin);
+
 
 void app_main(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10) {
 
-	init_button();
+	// init_button();
 	init_temp_sensor();
-
 	sample_sensors(huart2, htim10);
 
 }
 
 void init_temp_sensor() {
 	__HAL_RCC_GPIOA_CLK_ENABLE();
-	GPIO_InitTypeDef Init_Temp;
-
-	Init_Temp.Pin = GPIO_PIN_1;
-	Init_Temp.Mode = GPIO_MODE_OUTPUT_PP;
-	Init_Temp.Pull = GPIO_PULLUP;
-	Init_Temp.Speed = GPIO_SPEED_LOW;
-
-	HAL_GPIO_Init(GPIOD, &Init_Temp);
-
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+	set_pin_output(GPIOA, GPIO_PIN_1);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, 0);
 	HAL_Delay(18);
-	delay_us(20);
-	Init_Temp.Mode = GPIO_MODE_INPUT;
-	HAL_GPIO_Init(GPIOD, &Init_Temp);
+	set_pin_input(GPIOA, GPIO_PIN_1);
 }
 
 
@@ -55,10 +47,36 @@ void init_button() {
 	HAL_GPIO_Init(B1_GPIO_Port, &Init_Button);
 }
 
+void set_pin_input(GPIO_TypeDef *gpio, uint16_t gpio_pin) {
+	GPIO_InitTypeDef gpio_init;
+	gpio_init.Pin = gpio_pin;
+	gpio_init.Mode = GPIO_MODE_INPUT;
+	gpio_init.Pull = GPIO_PULLUP;
+
+	HAL_GPIO_Init(gpio, &gpio_init);
+}
+
+void set_pin_output(GPIO_TypeDef *gpio, uint16_t gpio_pin) {
+	GPIO_InitTypeDef gpio_init;
+	gpio_init.Pin = gpio_pin;
+	gpio_init.Mode = GPIO_MODE_OUTPUT_PP;
+	gpio_init.Speed = GPIO_SPEED_FREQ_LOW;
+
+	HAL_GPIO_Init(gpio, &gpio_init);
+}
+
 void sample_sensors(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10) {
 	while (1) {
-		sample_button(huart2);
-		uint8_t sample = sample_temp_sensor(huart2, htim10);
+		// sample_button(huart2);
+		uint8_t response = temp_check_response(htim10);
+		uint8_t rh_byte1 = sample_temp_sensor(htim10);
+		uint8_t rh_byte2 = sample_temp_sensor(htim10);
+		uint8_t temp_byte1 = sample_temp_sensor(htim10);
+		uint8_t temp_byte2 = sample_temp_sensor(htim10);
+		uint8_t sum = sample_temp_sensor(htim10);
+
+		char ebuffer[32];
+		HAL_UART_Transmit(&huart2, (uint32_t*)ebuffer, sprintf(ebuffer, "temp: %d\n\r", temp_byte1), 1000);
 	}
 }
 
@@ -81,17 +99,8 @@ void sample_button(UART_HandleTypeDef huart2) {
 	}
 }
 
-/*
-void sample_temp_sensor(UART_HandleTypeDef huart2) {
-	GPIO_PinState sample = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
-	char buffer[32];
-	HAL_UART_Transmit(&huart2, (uint16_t*)buffer, sprintf(buffer, "temp: %d\n\r", sample), 1000);
-	HAL_Delay(2000);
-}
-*/
-
-uint8_t sample_temp_sensor(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10) {
-	uint8_t sample;
+uint8_t sample_temp_sensor(TIM_HandleTypeDef htim10) {
+	uint8_t sample = 0;
 	for (uint8_t i = 0; i < 8; i++) {
 		while (!(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1))) {
 			delay_us(40, htim10);
@@ -127,6 +136,6 @@ uint8_t temp_check_response(TIM_HandleTypeDef htim10) {
 
 
 void delay_us(uint16_t us, TIM_HandleTypeDef htim10) {
-	__HAL_TIM_SET_COUNTER(&htim10,0);  // set the counter value a 0
+	__HAL_TIM_SET_COUNTER(&htim10, 0);  // set the counter value a 0
 	while (__HAL_TIM_GET_COUNTER(&htim10) < us);  // wait for the counter to reach the us input in the parameter
 }

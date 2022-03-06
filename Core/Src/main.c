@@ -55,7 +55,7 @@ static void MX_USART2_UART_Init(void);
 static void MX_USART6_UART_Init(void);
 static void MX_TIM10_Init(void);
 /* USER CODE BEGIN PFP */
-void app_main();
+void app_main(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -105,7 +105,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	  app_main(uhart2, htim10);
+	  app_main(huart2, htim10);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
