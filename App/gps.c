@@ -42,7 +42,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
 }
 
-void gps_loop() {
+void gps_loop(UART_HandleTypeDef huart2) {
 
 	struct Latitude lat;
 	struct Longitude lon;
@@ -54,9 +54,11 @@ void gps_loop() {
 
 	uint8_t count = 0;
 
+	HAL_UART_Receive_DMA(&huart2, buffs.buff, 255);
+
 	while (1) {
 		if (flag == 1) {
-			continue;
+			memset(buffs.buff_str, "%s", buffs.buff);
 		}
 	}
 }
