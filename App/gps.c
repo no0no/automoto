@@ -1,3 +1,5 @@
+
+/*
 uint8_t flag = 0;
 
 struct Longitude {
@@ -62,3 +64,4 @@ void gps_loop(UART_HandleTypeDef huart2) {
 		}
 	}
 }
+*/
