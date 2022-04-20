@@ -21,6 +21,14 @@
 #define MCP9808_REG_CONF 0x01
 #define MCP9808_ADDR (0x18 << 1)
 
+typedef struct {
+	I2C_HandleTypeDef* instance;
+	uint16_t sdaPin;
+	GPIO_TypeDef* sdaPort;
+	uint16_t sclPin;
+	GPIO_TypeDef* sclPort;
+} I2C_Module_t;
+
 void init_button();
 void sample_sensors(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10);
 void sample_button(UART_HandleTypeDef huart2);
@@ -33,19 +41,11 @@ static uint8_t wait_for_gpio_state_timeout(GPIO_TypeDef *port, uint16_t pin, GPI
 
 char buffer[64];
 
-typedef struct {
-	I2C_HandleTypeDef instance;
-	uint16_t sdaPin;
-	GPIO_TypeDef* sdaPort;
-	uint16_t sclPin;
-	GPIO_TypeDef* sclPort;
-} I2C_Module_t;
-
 static uint8_t wait_for_gpio_state_timeout(GPIO_TypeDef *port, uint16_t pin, GPIO_PinState state, uint32_t timeout) {
     uint32_t Tickstart = HAL_GetTick();
     uint8_t ret = 1;
     /* Wait until flag is set */
-    for(;(state != HAL_GPIO_ReadPin(port, pin)) && (TRUE == ret);) {
+    for(;(state != HAL_GPIO_ReadPin(port, pin)) && (1 == ret);) {
         /* Check for the timeout */
         if (timeout != HAL_MAX_DELAY) {
             if ((timeout == 0U) || ((HAL_GetTick() - Tickstart) > timeout)) {
@@ -139,10 +139,6 @@ void temp_loop(UART_HandleTypeDef huart2, I2C_Module_t* mod) {
 	HAL_StatusTypeDef ret;
 
 	uint8_t temp_data[2];
-	uint8_t buf[12];
-	uint8_t buf2[12];
-
-	float temp;
 
 	uint8_t dev_id[2];
 	dev_id[0] = 0;
@@ -155,17 +151,11 @@ void temp_loop(UART_HandleTypeDef huart2, I2C_Module_t* mod) {
 
 		// ret = HAL_I2C_Mem_Read(&hi2c1, MCP9808_ADDR | 0x01, MCP9808_REG_TEMP, 1, temp_data, 2, 50);
 
-		ret = HAL_I2C_Mem_Read(mod->instance, MCP9808_ADDR, MCP9808_REG_DEVID, I2C_MEMADD_SIZE_8BIT, dev_id, 2, HAL_MAX_DELAY);
+		ret = HAL_I2C_Mem_Read(mod->instance, MCP9808_ADDR, MCP9808_REG_DEVID, I2C_MEMADD_SIZE_8BIT, dev_id, 2, 1000);
 		if (ret != HAL_OK) {
-			I2C_ClearBusyFlagErratum(&mod, 1000);
+			I2C_ClearBusyFlagErratum(mod, 1000);
 		}
-		ret = HAL_I2C_Mem_Read(mod->instance, MCP9808_ADDR, MCP9808_REG_MANID, I2C_MEMADD_SIZE_8BIT, man_id, 2, HAL_MAX_DELAY);
-		sprintf((char*)buf, "devid: %d\n\r", dev_id);
-		sprintf((char*)buf2, "manid: %d\n\r", man_id);
-
-		HAL_UART_Transmit(&huart2, buf2, strlen((char*)buf2), HAL_MAX_DELAY);
-		HAL_Delay(1000);
-		HAL_UART_Transmit(&huart2, buf, strlen((char*)buf), HAL_MAX_DELAY);
+		ret = HAL_I2C_Mem_Read(mod->instance, MCP9808_ADDR, MCP9808_REG_MANID, I2C_MEMADD_SIZE_8BIT, man_id, 2, 1000);
 
 		HAL_Delay(500);
 	}
@@ -176,7 +166,7 @@ void app_main(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10, I2C_HandleTyp
 	// init_button();
 	// sample_sensors(huart2, htim10);
 	I2C_Module_t mod;
-	mod.instance = hi2c1;
+	mod.instance = &hi2c1;
 	mod.sdaPin = I2C1_SDA_Pin;
 	mod.sdaPort = I2C1_SDA_GPIO_Port;
 	mod.sclPin = I2C1_SCL_Pin;
