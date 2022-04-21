@@ -19,7 +19,7 @@
 
 #define MCP9808_REG_TEMP 0x05
 #define MCP9808_REG_CONF 0x01
-#define MCP9808_ADDR (0x18 << 1)
+#define MCP9808_ADDR (0x18)
 
 typedef struct {
 	I2C_HandleTypeDef* instance;
@@ -139,13 +139,12 @@ void temp_loop(UART_HandleTypeDef huart2, I2C_Module_t* mod) {
 	HAL_StatusTypeDef ret;
 
 	uint8_t temp_data[2];
+	temp_data[0] = 0;
+	temp_data[1] = 0;
 
 	uint8_t dev_id[2];
 	dev_id[0] = 0;
 	dev_id[1] = 0;
-	uint8_t man_id[2];
-	man_id[0] = 0;
-	man_id[1] = 0;
 
 	while (1) {
 
@@ -154,9 +153,13 @@ void temp_loop(UART_HandleTypeDef huart2, I2C_Module_t* mod) {
 		ret = HAL_I2C_Mem_Read(mod->instance, MCP9808_ADDR, MCP9808_REG_DEVID, I2C_MEMADD_SIZE_8BIT, dev_id, 2, 1000);
 		if (ret != HAL_OK) {
 			I2C_ClearBusyFlagErratum(mod, 1000);
+			// mod->instance->Instance->CR1 |= (1<<15);
+			// mod->instance->Instance->CR1 &= ~(1<<15);
 		}
-		ret = HAL_I2C_Mem_Read(mod->instance, MCP9808_ADDR, MCP9808_REG_MANID, I2C_MEMADD_SIZE_8BIT, man_id, 2, 1000);
-
+		ret = HAL_I2C_Mem_Read(mod->instance, MCP9808_ADDR, MCP9808_REG_TEMP, I2C_MEMADD_SIZE_8BIT, temp_data, 2, 1000);
+		if (ret != HAL_OK) {
+			SET_BIT(mod->instance->Instance->CR1, I2C_CR1_SWRST);
+		}
 		HAL_Delay(500);
 	}
 }
