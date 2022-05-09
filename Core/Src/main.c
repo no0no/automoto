@@ -41,10 +41,7 @@
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
 
-TIM_HandleTypeDef htim10;
-
 UART_HandleTypeDef huart2;
-UART_HandleTypeDef huart6;
 
 /* USER CODE BEGIN PV */
 
@@ -54,11 +51,9 @@ UART_HandleTypeDef huart6;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
-static void MX_USART6_UART_Init(void);
-static void MX_TIM10_Init(void);
 static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
-void app_main(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10, I2C_HandleTypeDef hi2c1);
+void app_main(UART_HandleTypeDef huart2, I2C_HandleTypeDef hi2c1);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -95,12 +90,8 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
-  MX_USART6_UART_Init();
-  MX_TIM10_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-
-  HAL_TIM_Base_Start(&htim10);
 
   /* USER CODE END 2 */
 
@@ -109,7 +100,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	  app_main(huart2, htim10, hi2c1);
+	  app_main(huart2, hi2c1);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -171,6 +162,14 @@ static void MX_I2C1_Init(void)
   /* USER CODE END I2C1_Init 0 */
 
   /* USER CODE BEGIN I2C1_Init 1 */
+	GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Pin = GPIO_PIN_8 | GPIO_PIN_9;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+    GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
+    __GPIOB_CLK_ENABLE();
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
@@ -189,37 +188,6 @@ static void MX_I2C1_Init(void)
   /* USER CODE BEGIN I2C1_Init 2 */
 
   /* USER CODE END I2C1_Init 2 */
-
-}
-
-/**
-  * @brief TIM10 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM10_Init(void)
-{
-
-  /* USER CODE BEGIN TIM10_Init 0 */
-
-  /* USER CODE END TIM10_Init 0 */
-
-  /* USER CODE BEGIN TIM10_Init 1 */
-
-  /* USER CODE END TIM10_Init 1 */
-  htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 50-1;
-  htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 65535;
-  htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM10_Init 2 */
-
-  /* USER CODE END TIM10_Init 2 */
 
 }
 
@@ -257,39 +225,6 @@ static void MX_USART2_UART_Init(void)
 }
 
 /**
-  * @brief USART6 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART6_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART6_Init 0 */
-
-  /* USER CODE END USART6_Init 0 */
-
-  /* USER CODE BEGIN USART6_Init 1 */
-
-  /* USER CODE END USART6_Init 1 */
-  huart6.Instance = USART6;
-  huart6.Init.BaudRate = 115200;
-  huart6.Init.WordLength = UART_WORDLENGTH_8B;
-  huart6.Init.StopBits = UART_STOPBITS_1;
-  huart6.Init.Parity = UART_PARITY_NONE;
-  huart6.Init.Mode = UART_MODE_TX_RX;
-  huart6.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart6.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart6) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART6_Init 2 */
-
-  /* USER CODE END USART6_Init 2 */
-
-}
-
-/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -305,7 +240,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, LD2_Pin|GPIO_PIN_8, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -313,12 +248,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LD2_Pin PA8 */
-  GPIO_InitStruct.Pin = LD2_Pin|GPIO_PIN_8;
+  /*Configure GPIO pin : LD2_Pin */
+  GPIO_InitStruct.Pin = LD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
 
 }
 

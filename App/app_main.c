@@ -29,17 +29,16 @@ typedef struct {
 	GPIO_TypeDef* sclPort;
 } I2C_Module_t;
 
-void init_button();
-void sample_sensors(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10);
-void sample_button(UART_HandleTypeDef huart2);
-void delay_us(uint16_t us, TIM_HandleTypeDef htim10);
-void set_pin_input(GPIO_TypeDef *gpio, uint16_t gpio_pin);
-void set_pin_output(GPIO_TypeDef *gpio, uint16_t gpio_pin);
 void temp_loop(UART_HandleTypeDef huart2, I2C_Module_t* mod);
 static void I2C_ClearBusyFlagErratum(I2C_Module_t* i2c, uint32_t timeout);
 static uint8_t wait_for_gpio_state_timeout(GPIO_TypeDef *port, uint16_t pin, GPIO_PinState state, uint32_t timeout);
+static void read_addr(I2C_Module_t* mod, uint8_t REG);
+static uint16_t read_temp(I2C_Module_t* mod);
 
 char buffer[64];
+uint8_t readBuffer[5];
+
+#define word(x,y) (((x) << 8) | (y))
 
 static uint8_t wait_for_gpio_state_timeout(GPIO_TypeDef *port, uint16_t pin, GPIO_PinState state, uint32_t timeout) {
     uint32_t Tickstart = HAL_GetTick();
@@ -56,6 +55,7 @@ static uint8_t wait_for_gpio_state_timeout(GPIO_TypeDef *port, uint16_t pin, GPI
     }
     return ret;
 }
+
 static void I2C_ClearBusyFlagErratum(I2C_Module_t* i2c, uint32_t timeout) {
     GPIO_InitTypeDef GPIO_InitStructure;
 
@@ -136,38 +136,34 @@ static void I2C_ClearBusyFlagErratum(I2C_Module_t* i2c, uint32_t timeout) {
 }
 
 void temp_loop(UART_HandleTypeDef huart2, I2C_Module_t* mod) {
-	HAL_StatusTypeDef ret;
 
-	uint8_t temp_data[2];
-	temp_data[0] = 0;
-	temp_data[1] = 0;
-
-	uint8_t dev_id[2];
-	dev_id[0] = 0;
-	dev_id[1] = 0;
-
+	uint16_t temp;
 	while (1) {
-
-		// ret = HAL_I2C_Mem_Read(&hi2c1, MCP9808_ADDR | 0x01, MCP9808_REG_TEMP, 1, temp_data, 2, 50);
-
-		ret = HAL_I2C_Mem_Read(mod->instance, MCP9808_ADDR, MCP9808_REG_DEVID, I2C_MEMADD_SIZE_8BIT, dev_id, 2, 1000);
-		if (ret != HAL_OK) {
-			I2C_ClearBusyFlagErratum(mod, 1000);
-			// mod->instance->Instance->CR1 |= (1<<15);
-			// mod->instance->Instance->CR1 &= ~(1<<15);
-		}
-		ret = HAL_I2C_Mem_Read(mod->instance, MCP9808_ADDR, MCP9808_REG_TEMP, I2C_MEMADD_SIZE_8BIT, temp_data, 2, 1000);
-		if (ret != HAL_OK) {
-			SET_BIT(mod->instance->Instance->CR1, I2C_CR1_SWRST);
-		}
-		HAL_Delay(500);
+		temp = read_temp(mod);
 	}
 }
 
-void app_main(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10, I2C_HandleTypeDef hi2c1) {
+static uint16_t read_temp(I2C_Module_t* mod) {
+	read_addr(mod, MCP9808_REG_TEMP);
+	uint16_t t = word(readBuffer[0], readBuffer[1]);
+	return t;
+}
 
-	// init_button();
-	// sample_sensors(huart2, htim10);
+static void read_addr(I2C_Module_t* mod, uint8_t REG) {
+	HAL_StatusTypeDef ret;
+	uint8_t readReg = REG;
+
+	ret = HAL_I2C_Master_Transmit(mod->instance, MCP9808_ADDR<<1, &readReg, 1, 2000);
+	if (ret == HAL_BUSY) {
+		I2C_ClearBusyFlagErratum(mod, 1000);
+		__HAL_RCC_I2C1_FORCE_RESET();
+		HAL_Delay(2);
+		__HAL_RCC_I2C1_RELEASE_RESET();
+	}
+	ret = HAL_I2C_Master_Receive(mod->instance, MCP9808_ADDR<<1, readBuffer, 2, 2000);
+}
+
+void app_main(UART_HandleTypeDef huart2, I2C_HandleTypeDef hi2c1) {
 	I2C_Module_t mod;
 	mod.instance = &hi2c1;
 	mod.sdaPin = I2C1_SDA_Pin;
@@ -175,64 +171,4 @@ void app_main(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10, I2C_HandleTyp
 	mod.sclPin = I2C1_SCL_Pin;
 	mod.sclPort = I2C1_SCL_GPIO_Port;
 	temp_loop(huart2, &mod);
-}
-
-void init_button() {
-	__HAL_RCC_GPIOC_CLK_ENABLE();
-	GPIO_InitTypeDef Init_Button;
-
-	Init_Button.Pin = B1_Pin;
-	Init_Button.Mode = GPIO_MODE_INPUT;
-	Init_Button.Pull = GPIO_NOPULL;
-	Init_Button.Speed = GPIO_SPEED_LOW;
-
-	HAL_GPIO_Init(B1_GPIO_Port, &Init_Button);
-}
-
-void set_pin_input(GPIO_TypeDef *gpio, uint16_t gpio_pin) {
-	GPIO_InitTypeDef gpio_init = {0};
-	gpio_init.Pin = gpio_pin;
-	gpio_init.Mode = GPIO_MODE_INPUT;
-	gpio_init.Pull = GPIO_PULLUP;
-
-	HAL_GPIO_Init(gpio, &gpio_init);
-}
-
-void set_pin_output(GPIO_TypeDef *gpio, uint16_t gpio_pin) {
-	GPIO_InitTypeDef gpio_init = {0};
-	gpio_init.Pin = gpio_pin;
-	gpio_init.Mode = GPIO_MODE_OUTPUT_PP;
-	gpio_init.Speed = GPIO_SPEED_FREQ_LOW;
-
-	HAL_GPIO_Init(gpio, &gpio_init);
-}
-
-void sample_sensors(UART_HandleTypeDef huart2, TIM_HandleTypeDef htim10) {
-	while (1) {
-		// sample_button(huart2);
-	}
-}
-
-void sample_button(UART_HandleTypeDef huart2) {
-	uint32_t tickstart = 0;
-	GPIO_PinState first_press = HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin);
-	if (!first_press) {
-		tickstart = HAL_GetTick();
-		// TODO: Interrupt instead of delay
-		HAL_Delay(300);
-		while(1) {
-			GPIO_PinState second_press = HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin);
-			if (!second_press) {
-				uint32_t elapsed = HAL_GetTick() - tickstart;
-				char ebuffer[32];
-				HAL_UART_Transmit(&huart2, (uint32_t*)ebuffer, sprintf(ebuffer, "elapsed: %d\n\r", elapsed), 1000);
-				break;
-			}
-		}
-	}
-}
-
-void delay_us(uint16_t us, TIM_HandleTypeDef htim10) {
-	__HAL_TIM_SET_COUNTER(&htim10, 0);  // set the counter value a 0
-	while (__HAL_TIM_GET_COUNTER(&htim10) < us);  // wait for the counter to reach the us input in the parameter
 }
