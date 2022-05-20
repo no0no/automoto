@@ -16,12 +16,21 @@
 #define MCP9808_REG_CONF  0x01
 #define MCP9808_ADDR      0x18
 
+#define SHT30_ADDR		  0x44
+#define SHT30_SINGLE_SHOT 0x24
+
 #define word(x,y) (((x) << 8) | (y))
 
 static void read_addr(I2C_HandleTypeDef hi2c1, uint8_t REG);
 uint16_t read_temp(I2C_HandleTypeDef hi2c1);
 
 static uint8_t readBuffer[5];
+
+uint16_t read_sht30(I2C_HandleTypeDef hi2c1) {
+	read_addr(hi2c1, SHT30_SINGLE_SHOT);
+	uint16_t t = word(readBuffer[0], readBuffer[1]);
+	return t;
+}
 
 uint16_t read_temp(I2C_HandleTypeDef hi2c1) {
 	read_addr(hi2c1, MCP9808_REG_TEMP);
