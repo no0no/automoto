@@ -23,9 +23,10 @@ void gpio_i2c1_init() {
 }
 
 void temp_loop(UART_HandleTypeDef huart2, I2C_HandleTypeDef hi2c1) {
-	uint16_t temp;
+	uint16_t temp1, temp2;
 	while (1) {
-		temp = read_temp(hi2c1);
+		temp1 = read_mcp9808(hi2c1);
+		temp2 = read_sht30(hi2c1);
 	}
 }
 

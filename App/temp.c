@@ -21,29 +21,31 @@
 
 #define word(x,y) (((x) << 8) | (y))
 
-static void read_addr(I2C_HandleTypeDef hi2c1, uint8_t REG);
-uint16_t read_temp(I2C_HandleTypeDef hi2c1);
+static void read_addr(I2C_HandleTypeDef hi2c1, uint8_t REG, uint8_t addr, uint8_t* buffer);
+uint16_t read_mcp9808(I2C_HandleTypeDef hi2c1);
+uint16_t read_sht30(I2C_HandleTypeDef hi2c1);
 
-static uint8_t readBuffer[5];
+static uint8_t read_buffer[2];
+static uint8_t sht30_buffer[2];
 
 uint16_t read_sht30(I2C_HandleTypeDef hi2c1) {
-	read_addr(hi2c1, SHT30_SINGLE_SHOT);
-	uint16_t t = word(readBuffer[0], readBuffer[1]);
+	read_addr(hi2c1, SHT30_SINGLE_SHOT, SHT30_ADDR, sht30_buffer);
+	uint16_t t = word(sht30_buffer[0], sht30_buffer[1]);
 	return t;
 }
 
-uint16_t read_temp(I2C_HandleTypeDef hi2c1) {
-	read_addr(hi2c1, MCP9808_REG_TEMP);
-	uint16_t t = word(readBuffer[0], readBuffer[1]);
+uint16_t read_mcp9808(I2C_HandleTypeDef hi2c1) {
+	read_addr(hi2c1, MCP9808_REG_TEMP, MCP9808_ADDR, read_buffer);
+	uint16_t t = word(read_buffer[0], read_buffer[1]);
 	return t;
 }
 
-static void read_addr(I2C_HandleTypeDef hi2c1, uint8_t REG) {
+static void read_addr(I2C_HandleTypeDef hi2c1, uint8_t reg, uint8_t addr, uint8_t* buffer) {
 	HAL_StatusTypeDef ret;
-	uint8_t readReg = REG;
+	uint8_t read_reg = reg;
 
-	ret = HAL_I2C_Master_Transmit(&hi2c1, MCP9808_ADDR<<1, &readReg, 1, 2000);
-	ret = HAL_I2C_Master_Receive(&hi2c1, MCP9808_ADDR<<1, readBuffer, 2, 2000);
+	ret = HAL_I2C_Master_Transmit(&hi2c1, addr<<1, &read_reg, 1, 2000);
+	ret = HAL_I2C_Master_Receive(&hi2c1, addr<<1, buffer, 2, 2000);
 	// TODO: Add more sophisticated error handling
 	if (ret != HAL_OK) {
 		return;
