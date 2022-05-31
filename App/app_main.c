@@ -23,10 +23,18 @@ void gpio_i2c1_init() {
 }
 
 void temp_loop(UART_HandleTypeDef huart2, I2C_HandleTypeDef hi2c1) {
-	uint16_t temp1, temp2;
+	uint16_t mcp9808_temp;
+
+	float sht30_temperature, sht30_humidity;
+
+	// TODO: Better Error handling
+	if(!sht30_init(hi2c1)) {
+		printf("ERROR\n");
+	}
+
 	while (1) {
-		temp1 = read_mcp9808(hi2c1);
-		temp2 = read_sht30(hi2c1);
+		mcp9808_temp = read_mcp9808(hi2c1);
+		sht30_read_temperature_and_humidity(hi2c1, &sht30_temperature, &sht30_humidity);
 	}
 }
 
