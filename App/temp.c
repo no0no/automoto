@@ -39,7 +39,7 @@ static void read_addr(I2C_HandleTypeDef hi2c1, uint8_t REG, uint8_t addr, uint8_
 uint16_t read_mcp9808(I2C_HandleTypeDef hi2c1);
 bool sht30_read_temperature_and_humidity(I2C_HandleTypeDef hi2c1, float *temperature, float *humidity);
 static bool sht30_send_command(I2C_HandleTypeDef hi2c1, sht30_command_t command);
-bool sht30_set_header_enable(I2C_HandleTypeDef hi2c1, bool enable);
+bool sht30_set_heater_enable(I2C_HandleTypeDef hi2c1, bool enable);
 bool sht30_init(I2C_HandleTypeDef hi2c1);
 static uint8_t calculate_crc(const uint8_t *data, size_t length);
 static uint16_t uint8_to_uint16(uint8_t msb, uint8_t lsb);
@@ -50,7 +50,7 @@ static uint8_t sht30_buffer[2];
 static bool sht30_send_command(I2C_HandleTypeDef hi2c1, sht30_command_t command) {
 	uint8_t command_buffer[2] = {(command & 0xff00u) >> 8u, command & 0xffu};
 
-	if (HAL_I2C_Master_Transmit(&hi2c1, SHT3X_I2C_DEVICE_ADDRESS_ADDR_PIN_LOW << 1u, command_buffer, sizeof(command_buffer), 30) != HAL_OK) {
+	if (HAL_I2C_Master_Transmit(&hi2c1, SHT3X_I2C_DEVICE_ADDRESS_ADDR_PIN_LOW << 1, command_buffer, sizeof(command_buffer), 30) != HAL_OK) {
 		return false;
 	}
 
@@ -62,7 +62,7 @@ bool sht30_init(I2C_HandleTypeDef hi2c1) {
 	// TODO: Assert i2c frequency is not too high
 
 	uint8_t status_reg_and_checksum[3];
-	if (HAL_I2C_Mem_Read(&hi2c1, SHT3X_I2C_DEVICE_ADDRESS_ADDR_PIN_LOW << 1u, SHT3X_COMMAND_READ_STATUS, 2, (uint8_t*)&status_reg_and_checksum,
+	if (HAL_I2C_Mem_Read(&hi2c1, SHT3X_I2C_DEVICE_ADDRESS_ADDR_PIN_LOW << 1, SHT3X_COMMAND_READ_STATUS, 2, (uint8_t*)&status_reg_and_checksum,
 					  sizeof(status_reg_and_checksum), 30) != HAL_OK) {
 		return false;
 	}
@@ -80,7 +80,7 @@ static uint16_t uint8_to_uint16(uint8_t msb, uint8_t lsb) {
 	return (uint16_t)((uint16_t)msb << 8u) | lsb;
 }
 
-bool sht30_set_header_enable(I2C_HandleTypeDef hi2c1, bool enable) {
+bool sht30_set_heater_enable(I2C_HandleTypeDef hi2c1, bool enable) {
 	if (enable) {
 		return sht30_send_command(hi2c1, SHT3X_COMMAND_HEATER_ENABLE);
 	} else {
@@ -113,7 +113,7 @@ bool sht30_read_temperature_and_humidity(I2C_HandleTypeDef hi2c1, float *tempera
 	HAL_Delay(1);
 
 	uint8_t buffer[6];
-	if (HAL_I2C_Master_Receive(&hi2c1, SHT3X_I2C_DEVICE_ADDRESS_ADDR_PIN_LOW << 1u, buffer, sizeof(buffer), 30) != HAL_OK) {
+	if (HAL_I2C_Master_Receive(&hi2c1, SHT3X_I2C_DEVICE_ADDRESS_ADDR_PIN_LOW << 1, buffer, sizeof(buffer), 30) != HAL_OK) {
 		return false;
 	}
 
